@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Clone Control Command Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #151d30;
+            --bg-card: #1e2942;
+            --border-color: #2a3b5c;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Navigation Layout Frame */
+        aside {
+            width: 280px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .sidebar-brand {
+            padding: 25px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .menu-item.active {
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Toggle Button Container Styling */
+        .engine-status-box {
+            margin-top: auto;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(11, 15, 25, 0.4);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #475569;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--success-color); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Main Workspace Content Area Frame Layout */
+        main {
+            margin-left: 280px;
+            flex-grow: 1;
+            padding: 40px;
+            max-width: 1400px;
+        }
+
+        header {
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { font-size: 28px; font-weight: 700; }
+        p.subtitle { color: var(--text-secondary); margin-top: 4px; }
+
+        /* Analytics Metric Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .metric-info h4 { color: var(--text-secondary); font-size: 14px; font-weight: 600; text-transform: uppercase; }
+        .metric-info h2 { font-size: 32px; font-weight: 700; margin-top: 8px; }
+        .metric-icon { width: 55px; height: 55px; border-radius: 10px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent-color); }
+
+        /* Core Workspace Layout Panel Containers */
+        .dashboard-section { display: none; animation: fadeIn 0.3s ease; }
+        .dashboard-section.active-section { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .workspace-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        /* Large Persona Editor Textarea Styling */
+        .engine-textarea {
+            width: 100%;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            font-family: 'Courier New', Courier, monospace;
+            margin-bottom: 20px;
+        }
+
+        .engine-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn-action {
+            background-color: var(--accent-color);
+            color: var(--bg-base);
+            border: none;
+            padding: 14px 28px;
+            font-size: 15px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .status-toast { margin-left: 15px; font-weight: 600; font-size: 14px; }
+
+        /* Activity Logs Tracking Table Layout */
+        .table-responsive { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 16px; color: var(--text-secondary); font-weight: 600; border-bottom: 2px solid var(--border-color); }
+        td { padding: 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        
+        /* Badges styling matrices */
+        .badge {
+            padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; display: inline-block;
+        }
+        .badge-friend { background: rgba(56, 189, 248, 0.15); color: var(--accent-color); border: 1px solid var(--accent-color); }
+        .badge-family { background: rgba(16, 185, 129, 0.15); color: var(--success-color); border: 1px solid var(--success-color); }
+        .badge-client { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+        .badge-stranger { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+        .log-text-block { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+
+        /* Manual Messaging Panel Inputs */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-secondary); }
+        .form-input {
+            width: 100%; background: var(--bg-base); border: 1px solid var(--border-color); padding: 14px; border-radius: 6px; color: #fff; font-size: 15px;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent-color); }
+
+        /* Small Direct Utility Button */
+        .btn-quick-reply {
+            background-color: #f59e0b;
+            color: #0b0f19;
+            border: none;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-quick-reply:hover { background-color: #d97706; }
+
+        /* Full Screen Blur Overlay Modal Box */
+        .quick-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .quick-modal-content {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            width: 440px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-brain"></i> NEXUS CLONE
+        </div>
+        <ul class="sidebar-menu">
+            <li><a class="menu-item active" onclick="switchTab('tab-persona', this)"><i class="fa-solid fa-sliders"></i> Persona Core Engine</a></li>
+            <li><a class="menu-item" onclick="switchTab('tab-logs', this)"><i class="fa-solid fa-list-timeline"></i> Conversation Logs</a></li>
+            <li><a class="menu-item" onclick="switchTab('tab-terminal', this)"><i class="fa-solid fa-paper-plane"></i> Outbound Terminal</a></li>
+        </ul>
+
+        <div class="engine-status-box">
+            <div class="toggle-container">
+                <span style="font-weight: 600; font-size: 14px;"><i class="fa-solid fa-robot" style="margin-right:8px;"></i> AI Response</span>
+                <label class="switch">
+                    <input type="checkbox" id="aiStatusCheckbox" onchange="toggleAiEngine()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <div>
+                <h1 id="workspaceTitle">Persona Core Engine</h1>
+                <p class="subtitle" id="workspaceSubtitle">Map out deep raw background data layers and memory assets</p>
+            </div>
+        </header>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-info">
+                    <h4>Total Logs Logged</h4>
+                    <h2 id="metricTotalMsgs">0</h2>
+                </div>
+                <div class="metric-icon"><i class="fa-solid fa-comments"></i></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-info">
+                    <h4>Active Channels</h4>
+                    <h2 id="metricChannels">0</h2>
+                </div>
+                <div class="metric-icon"><i class="fa-solid fa-address-book"></i></div>
+            </div>
+        </div>
+
+        <div id="tab-persona" class="dashboard-section active-section">
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3>🧠 Live Memory Prompt String</h3>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.5;">
+                    Write down everything here in plain words. Include your background timeline, project details, calisthenics habits, and specific family/friend guidelines. The AI will look here live to execute its personality parameters.
+                </p>
+                <textarea id="promptEngineArea" class="engine-textarea" rows="16" placeholder="Type your life background, project summaries, and communication conditions here..."></textarea>
+                <div>
+                    <button class="btn-action" onclick="saveSystemPrompt()"><i class="fa-solid fa-floppy-disk"></i> Commit Core Changes</button>
+                    <span id="promptSaveStatus" class="status-toast"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-logs" class="dashboard-section">
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3>📋 Real-Time Activity Streams</h3>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Contact Identity</th>
+                                <th>Phone Origin</th>
+                                <th>Relationship Classification</th>
+                                <th>Last Message Inbound</th>
+                                <th>Clone Dispatched Reaction</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableContainer">
+                            <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Querying cloud streams...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-terminal" class="dashboard-section">
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3>⚡ Direct Manual Transmission</h3>
+                </div>
+                <div class="form-group">
+                    <label>Recipient WhatsApp Number</label>
+                    <input type="text" id="termPhoneInput" class="form-input" placeholder="e.g. 919059262808">
+                </div>
+                <div class="form-group">
+                    <label>Message Content Payload</label>
+                    <textarea id="termMessageInput" class="form-input" rows="5" placeholder="Type an manual outbound message line to override bot execution..."></textarea>
+                </div>
+                <div>
+                    <button class="btn-action" onclick="sendManualMessage()"><i class="fa-solid fa-paper-plane"></i> Dispatch Payload</button>
+                    <span id="terminalStatus" class="status-toast"></span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="quickReplyModal" class="quick-modal-overlay">
+        <div class="quick-modal-content">
+            <h3 style="margin-bottom: 5px; font-size: 18px; color: #fff;">Manual Intercept Window</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">Target Recipient: <span id="modalTargetDisplay" style="color: var(--accent-color); font-weight: 700; font-family: monospace;"></span></p>
+            
+            <div class="form-group">
+                <textarea id="modalMessagePayload" class="form-input" rows="4" placeholder="Type your manual override message string here..."></textarea>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                <button class="form-input" style="width: auto; padding: 10px 20px; background: #475569; border: none; cursor: pointer;" onclick="closeQuickModal()">Cancel</button>
+                <button class="btn-action" style="padding: 10px 20px; font-size: 14px;" onclick="dispatchModalPayload()">Send Message</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalAiModeState = true;
+        let selectedModalNumber = "";
+
+        function getThemeColor(variableName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+        }
+
+        function switchTab(sectionId, element) {
+            document.querySelectorAll('.dashboard-section').forEach(el => el.classList.remove('active-section'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active-section');
+            element.classList.add('active');
+
+            const title = document.getElementById('workspaceTitle');
+            const sub = document.getElementById('workspaceSubtitle');
+            if(sectionId === 'tab-persona') {
+                title.innerText = "Persona Core Engine";
+                sub.innerText = "Map out deep raw background data layers and memory assets";
+            } else if(sectionId === 'tab-logs') {
+                title.innerText = "Conversation Logs";
+                sub.innerText = "Review and inspect dynamic incoming traffic routing lines";
+                loadActivityStreams();
+            } else {
+                title.innerText = "Outbound Terminal";
+                sub.innerText = "Manually transmit custom outbound logs over target channels";
+            }
+        }
+
+        async function loadSystemDashboardMetrics() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('metricTotalMsgs').innerText = data.total || 0;
+                document.getElementById('metricChannels').innerText = data.activeChannels || 0;
+
+                const settingRes = await fetch('/api/settings');
+                const settingData = await settingRes.json();
+                globalAiModeState = settingData.aiModeActive;
+                document.getElementById('aiStatusCheckbox').checked = globalAiModeState;
+            } catch(e) { console.error("Metrics collection failed", e); }
+        }
+
+        async function loadCorePromptString() {
+            try {
+                const res = await fetch('/api/system-prompt');
+                const data = await res.json();
+                if(data.system_prompt) {
+                    document.getElementById('promptEngineArea').value = data.system_prompt;
+                }
+            } catch(e) { console.error("Error connecting memory engine lines", e); }
+        }
+
+        async function saveSystemPrompt() {
+            const promptVal = document.getElementById('promptEngineArea').value;
+            const statusBox = document.getElementById('promptSaveStatus');
+            statusBox.style.color = getThemeColor('--text-secondary');
+            statusBox.innerText = "Syncing with Cloud Core...";
+
+            try {
+                const res = await fetch('/api/system-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ system_prompt: promptVal })
+                });
+                const d = await res.json();
+                if(d.success) {
+                    statusBox.style.color = getThemeColor('--success-color');
+                    statusBox.innerText = "💾 Cloud Matrix Synchronized Successfully!";
+                    loadSystemDashboardMetrics();
+                } else { throw new Error(); }
+            } catch(e) {
+                statusBox.style.color = getThemeColor('--danger-color');
+                statusBox.innerText = "❌ Core pipeline structural write timeout.";
+            }
+            setTimeout(() => statusBox.innerText = "", 4000);
+        }
+
+        async function toggleAiEngine() {
+            const state = document.getElementById('aiStatusCheckbox').checked;
+            globalAiModeState = state;
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ aiModeActive: state })
+            });
+            // Instantly refresh list to render or hide quick buttons
+            if(document.getElementById('tab-logs').classList.contains('active-section')) {
+                loadActivityStreams();
+            }
+        }
+
+        async function loadActivityStreams() {
+            const container = document.getElementById('logsTableContainer');
+            try {
+                const res = await fetch('/api/messages');
+                const data = await res.json();
+                if(!data || data.length === 0) {
+                    container.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">No current channel pipelines found.</td></tr>`;
+                    return;
+                }
+                
+                container.innerHTML = data.map(item => {
+                    // Decide reaction block output: If AI is off, display the manual reply option button
+                    let reactionOutput = '';
+                    if (!globalAiModeState) {
+                        reactionOutput = `<button class="btn-quick-reply" onclick="openQuickModal('${item.from}')">Reply Manually</button>`;
+                    } else {
+                        reactionOutput = item.reply || '<i>Pipeline Active...</i>';
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>${item.contact}</strong></td>
+                            <td><span style="font-family:monospace; color: #94a3b8;">+${item.from}</span></td>
+                            <td><span class="badge badge-${item.type}">${item.type}</span></td>
+                            <td><div class="log-text-block">${item.incoming || ''}</div></td>
+                            <td><div class="log-text-block" style="color: #38bdf8; font-weight:500;">${reactionOutput}</div></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = `<tr><td colspan="5" style="text-align:center; color: #ef4444;">Failed loading database row elements.</td></tr>`;
+            }
+        }
+
+        // Quick Modal Popup Interceptors
+        function openQuickModal(phoneNumber) {
+            selectedModalNumber = phoneNumber;
+            document.getElementById('modalTargetDisplay').innerText = phoneNumber;
+            document.getElementById('modalMessagePayload').value = "";
+            document.getElementById('quickReplyModal').style.display = 'flex';
+            document.getElementById('modalMessagePayload').focus();
+        }
+
+        function closeQuickModal() {
+            document.getElementById('quickReplyModal').style.display = 'none';
+        }
+
+        async function dispatchModalPayload() {
+            const body = document.getElementById('modalMessagePayload').value;
+            if(!body.trim()) return alert("Payload content string cannot be empty!");
+
+            try {
+                const res = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to: selectedModalNumber, message: body })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    closeQuickModal();
+                    alert("🚀 Payload dispatched cleanly over Meta channels!");
+                    loadActivityStreams();
+                    loadSystemDashboardMetrics();
+                } else {
+                    alert("Execution rejected: " + data.error);
+                }
+            } catch(e) {
+                alert("Critical network transmit error.");
+            }
+        }
+
+        async function sendManualMessage() {
+            const phone = document.getElementById('termPhoneInput').value;
+            const body = document.getElementById('termMessageInput').value;
+            const status = document.getElementById('terminalStatus');
+
+            if(!phone || !body) {
+                status.style.color = "#ef4444";
+                status.innerText = "⚠️ Fill out target fields.";
+                return;
+            }
+
+            status.style.color = "#94a3b8";
+            status.innerText = "Pushing outbound frame packet...";
+
+            try {
+                const res = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to: phone, message: body })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    status.style.color = "#10b981";
+                    status.innerText = "🚀 Dispatched cleanly!";
+                    document.getElementById('termMessageInput').value = "";
+                    loadSystemDashboardMetrics();
+                } else { throw new Error(data.error); }
+            } catch(e) {
+                status.style.color = "#ef4444";
+                status.innerText = "❌ Transmit interrupted.";
+            }
+            setTimeout(() => status.innerText = "", 4000);
+        }
+
+        // Initialize App
+        loadSystemDashboardMetrics();
+        loadCorePromptString();
+        // Dynamic interval sync loop for streams table view context
+        setInterval(() => {
+            if(document.getElementById('tab-logs').classList.contains('active-section')) {
+                loadActivityStreams();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
