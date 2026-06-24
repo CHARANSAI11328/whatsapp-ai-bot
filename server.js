@@ -127,17 +127,23 @@ app.get('/health', async (req, res) => {
 });
 
 // Chronological history string formatter with clean identity tracking
-async function getPastHistoryString(phoneNum, contactName) {
+async function getPastHistoryString(phoneNum, contactName, excludeMsgId) {
   if (!supabase) {
     logEvent('WARNING', 'Database client uninitialized. Skipping history retrieval.');
     return "";
   }
   try {
     logEvent('INFO', 'Querying chat history for database sync...', { phone_number: phoneNum });
-    const { data, error } = await supabase
+    let query = supabase
       .from('messages')
-      .select('sender_type, message_body')
-      .eq('phone_number', phoneNum)
+      .select('id, sender_type, message_body')
+      .eq('phone_number', phoneNum);
+
+    if (excludeMsgId) {
+      query = query.neq('id', excludeMsgId);
+    }
+
+    const { data, error } = await query
       .order('timestamp', { ascending: false })
       .limit(10);
 
@@ -354,7 +360,7 @@ app.post('/webhook', async (req, res) => {
     let finalTargetName = currentName || "Mava";
     if (finalTargetName.toUpperCase() === 'CHARAN') finalTargetName = "Mava";
 
-    const pastHistoryText = await getPastHistoryString(cleanFrom, finalTargetName);
+    const pastHistoryText = await getPastHistoryString(cleanFrom, finalTargetName, msgId);
     
     // Fetch custom UI system prompt guidelines
     let baseDashboardPrompt = "You are Charan. Text back casually in Roman-Telugu.";
