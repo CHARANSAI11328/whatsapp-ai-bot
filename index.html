@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus Clone Control Command Panel</title>
-    <!-- Google Fonts: Outfit & Inter -->
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -377,79 +377,7 @@
             animation: pulse 1.5s infinite;
         }
 
-        /* Activity Logs Tracking Table Layout */
-        .table-responsive { overflow-x: auto; margin-top: 15px; }
-        
-        table { 
-            width: 100%; 
-            border-collapse: separate; 
-            border-spacing: 0 10px; 
-            text-align: left; 
-        }
-
-        th { 
-            padding: 18px 24px; 
-            color: var(--text-secondary); 
-            font-weight: 700; 
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        td { 
-            padding: 20px 24px; 
-            background: rgba(255, 255, 255, 0.015);
-            border-top: 1px solid rgba(255, 255, 255, 0.03);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            vertical-align: middle; 
-            transition: all 0.3s;
-        }
-
-        td:first-child {
-            border-left: 1px solid rgba(255, 255, 255, 0.03);
-            border-top-left-radius: 12px;
-            border-bottom-left-radius: 12px;
-        }
-
-        td:last-child {
-            border-right: 1px solid rgba(255, 255, 255, 0.03);
-            border-top-right-radius: 12px;
-            border-bottom-right-radius: 12px;
-        }
-
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(99, 102, 241, 0.2);
-        }
-        
-        /* Badges styling matrices */
-        .badge {
-            padding: 6px 12px; 
-            border-radius: 8px; 
-            font-size: 11px; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            letter-spacing: 0.5px;
-        }
-        .badge-friend { background: rgba(6, 182, 212, 0.1); color: var(--cyan-accent); border: 1px solid rgba(6, 182, 212, 0.25); }
-        .badge-family { background: rgba(16, 185, 129, 0.1); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.25); }
-        .badge-client { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); }
-        .badge-stranger { background: rgba(148, 163, 184, 0.08); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.15); }
-
-        .log-text-block { 
-            max-width: 320px; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            color: var(--text-secondary); 
-            font-size: 14px;
-        }
-
-        /* Manual Messaging Panel Inputs */
+        /* Form Inputs */
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px; color: var(--text-secondary); }
         
@@ -471,66 +399,327 @@
             background-color: rgba(3, 7, 18, 0.8);
         }
 
-        /* Small Direct Utility Button */
-        .btn-quick-reply {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            font-family: var(--font-display);
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
-        }
-        .btn-quick-reply:hover { 
-            transform: translateY(-1px);
-            box-shadow: 0 6px 15px rgba(245, 158, 11, 0.35);
+        /* ─── CHAT INTERFACE LAYOUT ─── */
+        .chat-container {
+            display: flex;
+            height: 620px;
+            background: rgba(9, 13, 26, 0.65);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
         }
 
-        /* Full Screen Blur Overlay Modal Box */
-        .quick-modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(3, 7, 18, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            z-index: 9999;
+        .chat-sidebar {
+            width: 320px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: rgba(3, 7, 18, 0.35);
+        }
+
+        .chat-search-bar {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .chat-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .chat-item.active-chat {
+            background: rgba(99, 102, 241, 0.09);
+            border-left: 4px solid #6366f1;
+        }
+
+        .chat-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 15px;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            flex-shrink: 0;
+        }
+
+        .chat-details {
+            flex-grow: 1;
+            min-width: 0; /* Enables text truncation */
+        }
+
+        .chat-details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .chat-name {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-snippet {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Chat Right Window Pane */
+        .chat-window {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            background: rgba(3, 7, 18, 0.15);
+        }
+
+        .chat-empty-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 40px;
+        }
+
+        .chat-empty-state i {
+            font-size: 55px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 22px;
+            opacity: 0.6;
+        }
+
+        .chat-empty-state h4 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .chat-empty-state p {
+            font-size: 14px;
+            max-width: 320px;
+            line-height: 1.6;
+        }
+
+        .chat-header {
+            padding: 18px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(9, 13, 26, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-window-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .chat-header-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .chat-header-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: monospace;
+            margin-top: 2px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-image: radial-gradient(rgba(99, 102, 241, 0.025) 1.5px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        .msg-row {
+            display: flex;
+            width: 100%;
+        }
+
+        .msg-row.msg-inbound {
+            justify-content: flex-start;
+        }
+
+        .msg-row.msg-outbound {
+            justify-content: flex-end;
+        }
+
+        .msg-bubble {
+            max-width: 65%;
+            padding: 12px 18px;
+            border-radius: 16px;
+            font-size: 14.5px;
+            line-height: 1.55;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border: 1px solid transparent;
+        }
+
+        .msg-row.msg-inbound .msg-bubble {
+            background: #1e293b;
+            color: #f1f5f9;
+            border-bottom-left-radius: 4px;
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .msg-row.msg-outbound .msg-bubble {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+            border-color: rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        .msg-text {
+            word-break: break-word;
+        }
+
+        .msg-meta {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .msg-row.msg-inbound .msg-meta {
+            color: var(--text-secondary);
+        }
+
+        .msg-tag {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+        }
+
+        .chat-footer {
+            padding: 20px 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(9, 13, 26, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-send-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 14px 22px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            height: 50px;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
-        .quick-modal-content {
-            background-color: var(--bg-sidebar);
-            border: 1px solid rgba(99, 102, 241, 0.25);
-            border-radius: 20px;
-            padding: 35px;
-            width: 480px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: modalScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+        .chat-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45);
         }
 
-        @keyframes modalScaleIn {
-            from { opacity: 0; transform: scale(0.92); }
-            to { opacity: 1; transform: scale(1); }
+        /* Badges */
+        .badge {
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.5px;
         }
+        .badge-friend { background: rgba(6, 182, 212, 0.1); color: var(--cyan-accent); border: 1px solid rgba(6, 182, 212, 0.25); }
+        .badge-family { background: rgba(16, 185, 129, 0.1); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.25); }
+        .badge-client { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); }
+        .badge-stranger { background: rgba(148, 163, 184, 0.08); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.15); }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: var(--bg-base);
+            background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: #1e293b;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
+            background: rgba(255, 255, 255, 0.2);
         }
     </style>
 </head>
@@ -542,8 +731,7 @@
         </div>
         <ul class="sidebar-menu">
             <li><a class="menu-item active" onclick="switchTab('tab-persona', this)"><i class="fa-solid fa-sliders"></i> Persona Core Engine</a></li>
-            <li><a class="menu-item" onclick="switchTab('tab-logs', this)"><i class="fa-solid fa-list-timeline"></i> Conversation Logs</a></li>
-            <li><a class="menu-item" onclick="switchTab('tab-terminal', this)"><i class="fa-solid fa-paper-plane"></i> Outbound Terminal</a></li>
+            <li><a class="menu-item" onclick="switchTab('tab-logs', this)"><i class="fa-solid fa-comments"></i> Conversation Logs</a></li>
         </ul>
 
         <div class="engine-status-box">
@@ -599,73 +787,64 @@
             </div>
         </div>
 
-        <!-- Tab: Conversation Logs -->
+        <!-- Tab: Conversation Logs (WhatsApp Split View) -->
         <div id="tab-logs" class="dashboard-section">
-            <div class="workspace-card">
-                <div class="card-header">
-                    <h3>📋 Real-Time Activity Pipeline Logs</h3>
+            <div class="chat-container">
+                <!-- Sidebar Pane: Channels List -->
+                <div class="chat-sidebar">
+                    <div class="chat-search-bar">
+                        <input type="text" id="chatSearchInput" class="form-input" placeholder="Search chats..." style="padding: 10px 14px; font-size: 13.5px;" oninput="filterChats()">
+                    </div>
+                    <div id="chatChannelsList" class="chat-list">
+                        <div style="text-align:center; padding: 30px; color: var(--text-secondary); font-size: 14px;">Querying cloud streams...</div>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Contact Identity</th>
-                                <th>Phone Origin</th>
-                                <th>Classification</th>
-                                <th>Last Message Inbound</th>
-                                <th>Response Action Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsTableContainer">
-                            <tr><td colspan="5" style="text-align:center; color: var(--text-secondary);">Querying cloud streams...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
-        <!-- Tab: Outbound Terminal -->
-        <div id="tab-terminal" class="dashboard-section">
-            <div class="workspace-card">
-                <div class="card-header">
-                    <h3>⚡ Direct Manual Intercept Dispatcher</h3>
-                </div>
-                <div class="form-group">
-                    <label>Recipient WhatsApp Number (With Country Code)</label>
-                    <input type="text" id="termPhoneInput" class="form-input" placeholder="e.g. 919059262808">
-                </div>
-                <div class="form-group">
-                    <label>Message Content Payload</label>
-                    <textarea id="termMessageInput" class="form-input" rows="5" placeholder="Type message payload..."></textarea>
-                </div>
-                <div>
-                    <button class="btn-action" onclick="sendManualMessage()"><i class="fa-solid fa-paper-plane"></i> Dispatch Payload</button>
-                    <span id="terminalStatus" class="status-toast"></span>
+                <!-- Chat Pane: Message Stream & Send Intercept -->
+                <div class="chat-window">
+                    <!-- Empty State -->
+                    <div id="chatEmptyState" class="chat-empty-state">
+                        <i class="fa-solid fa-comments"></i>
+                        <h4>Select a Conversation</h4>
+                        <p>Click on a contact from the left pane list to inspect conversation logs, review history, and manually intercept messaging.</p>
+                    </div>
+
+                    <!-- Active Chat Header -->
+                    <div id="chatHeader" class="chat-header" style="display: none;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <div class="chat-window-avatar" id="chatHeaderAvatar">M</div>
+                            <div>
+                                <h4 class="chat-header-title" id="chatHeaderName">Contact Name</h4>
+                                <div class="chat-header-subtitle" id="chatHeaderPhone">+919059262808</div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge" id="chatHeaderBadge">stranger</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Messages Container -->
+                    <div id="chatMessagesContainer" class="chat-messages" style="display: none;">
+                        <!-- Bubbles load here -->
+                    </div>
+
+                    <!-- Active Chat Typing Area -->
+                    <div id="chatFooter" class="chat-footer" style="display: none;">
+                        <input type="text" id="chatInputField" class="form-input" placeholder="Type a manual override reply..." onkeydown="handleChatInputKey(event)">
+                        <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal: Quick Reply Dialog -->
-    <div id="quickReplyModal" class="quick-modal-overlay">
-        <div class="quick-modal-content">
-            <h3 style="margin-bottom: 8px; font-size: 20px; font-family: var(--font-display); font-weight: 700; color: #fff;">Manual Override Dispatch</h3>
-            <p style="color: var(--text-secondary); font-size: 13.5px; margin-bottom: 22px;">Target Recipient: <span id="modalTargetDisplay" style="color: var(--cyan-accent); font-weight: 700; font-family: monospace;"></span></p>
-            
-            <div class="form-group">
-                <textarea id="modalMessagePayload" class="form-input" rows="4" placeholder="Type override message string..."></textarea>
-            </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 15px;">
-                <button class="form-input" style="width: auto; padding: 12px 24px; background: rgba(255, 255, 255, 0.05); border: none; cursor: pointer; font-weight: 600;" onclick="closeQuickModal()">Cancel</button>
-                <button class="btn-action" style="padding: 12px 24px; font-size: 14.5px;" onclick="dispatchModalPayload()">Send Message</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         let globalAiModeState = true;
-        let selectedModalNumber = "";
+        let activeChatPhone = null;
+        let activeChatName = "";
+        let activeChatType = "stranger";
+        let chatsDataList = [];
+        let refreshInterval = null;
 
         function switchTab(sectionId, element) {
             document.querySelectorAll('.dashboard-section').forEach(el => el.classList.remove('active-section'));
@@ -679,13 +858,19 @@
             if(sectionId === 'tab-persona') {
                 title.innerText = "Persona Core Engine";
                 sub.innerText = "Map out deep raw background data layers and memory assets";
+                // Stop log sync interval when away
+                clearInterval(refreshInterval);
+                refreshInterval = null;
             } else if(sectionId === 'tab-logs') {
                 title.innerText = "Conversation Logs";
                 sub.innerText = "Review and inspect dynamic incoming traffic routing lines";
                 loadActivityStreams();
-            } else {
-                title.innerText = "Outbound Terminal";
-                sub.innerText = "Manually transmit custom outbound logs over target channels";
+                // Start log sync loop every 5 seconds
+                if (!refreshInterval) {
+                    refreshInterval = setInterval(() => {
+                        loadActivityStreams(true); // silent background load
+                    }, 5000);
+                }
             }
         }
 
@@ -747,69 +932,170 @@
                 body: JSON.stringify({ aiModeActive: state })
             });
             if(document.getElementById('tab-logs').classList.contains('active-section')) {
-                loadActivityStreams();
+                loadActivityStreams(true);
             }
         }
 
-        async function loadActivityStreams() {
-            const container = document.getElementById('logsTableContainer');
+        // Fetch channels/chats sidebar list
+        async function loadActivityStreams(silent = false) {
+            const container = document.getElementById('chatChannelsList');
             try {
                 const res = await fetch('/api/messages');
                 const data = await res.json();
-                if(!data || data.length === 0) {
-                    container.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-secondary);">No current active channels found.</td></tr>`;
+                chatsDataList = data || [];
+                
+                if(chatsDataList.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--text-secondary); font-size: 14px;">No active channels found.</div>`;
                     return;
                 }
                 
-                container.innerHTML = data.map(item => {
-                    let reactionOutput = '';
-                    if (!globalAiModeState) {
-                        reactionOutput = `<button class="btn-quick-reply" onclick="openQuickModal('${item.from}')"><i class="fa-solid fa-reply"></i> Reply Manually</button>`;
-                    } else {
-                        reactionOutput = item.reply || '<span style="color: var(--text-secondary); font-style: italic;">Awaiting Reply...</span>';
-                    }
-
-                    return `
-                        <tr>
-                            <td><strong>${item.contact}</strong></td>
-                            <td><span style="font-family: monospace; color: var(--text-secondary); font-size: 13.5px;">+${item.from}</span></td>
-                            <td><span class="badge badge-${item.type}">${item.type}</span></td>
-                            <td><div class="log-text-block" title="${item.incoming || ''}">${item.incoming || '<i>No message inbound</i>'}</div></td>
-                            <td><div class="log-text-block" style="color: var(--cyan-accent); font-weight:500;">${reactionOutput}</div></td>
-                        </tr>
-                    `;
-                }).join('');
+                renderChannelsSidebar();
+                
+                // If a chat is active, silently reload its message bubbles
+                if (activeChatPhone && silent) {
+                    loadChatHistory(activeChatPhone, true);
+                }
             } catch(e) {
-                container.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--danger-color);">Failed loading database rows.</td></tr>`;
+                if (!silent) {
+                    container.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--danger-color); font-size: 14px;">Failed loading chat channels.</div>`;
+                }
             }
         }
 
-        function openQuickModal(phoneNumber) {
-            selectedModalNumber = phoneNumber;
-            document.getElementById('modalTargetDisplay').innerText = "+" + phoneNumber;
-            document.getElementById('modalMessagePayload').value = "";
-            document.getElementById('quickReplyModal').style.display = 'flex';
-            document.getElementById('modalMessagePayload').focus();
+        function renderChannelsSidebar() {
+            const container = document.getElementById('chatChannelsList');
+            const searchVal = document.getElementById('chatSearchInput').value.toLowerCase();
+            
+            const filtered = chatsDataList.filter(item => {
+                return item.contact.toLowerCase().includes(searchVal) || item.from.includes(searchVal);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding: 30px; color: var(--text-secondary); font-size: 13.5px;">No matches found.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const isSelected = item.from === activeChatPhone ? 'active-chat' : '';
+                const initial = item.contact.charAt(0).toUpperCase() || '?';
+                const snippet = item.reply || item.incoming || 'No messages';
+                
+                return `
+                    <div class="chat-item ${isSelected}" onclick="selectChat('${item.from}', '${item.contact}', '${item.type}')">
+                        <div class="chat-avatar">${initial}</div>
+                        <div class="chat-details">
+                            <div class="chat-details-header">
+                                <span class="chat-name">${item.contact}</span>
+                            </div>
+                            <div class="chat-snippet">${snippet}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function closeQuickModal() {
-            document.getElementById('quickReplyModal').style.display = 'none';
+        function filterChats() {
+            renderChannelsSidebar();
         }
 
-        async function dispatchModalPayload() {
-            const body = document.getElementById('modalMessagePayload').value;
-            if(!body.trim()) return alert("Payload content string cannot be empty!");
+        // Select a contact and load history
+        function selectChat(phoneNum, contactName, relationshipType) {
+            activeChatPhone = phoneNum;
+            activeChatName = contactName;
+            activeChatType = relationshipType;
+
+            // Highlight in sidebar list
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active-chat'));
+            loadActivityStreams(false); // Reload list to apply active highlight
+
+            // Reveal chat pane nodes
+            document.getElementById('chatEmptyState').style.display = 'none';
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('chatMessagesContainer').style.display = 'flex';
+            document.getElementById('chatFooter').style.display = 'flex';
+
+            // Populate header details
+            document.getElementById('chatHeaderName').innerText = contactName;
+            document.getElementById('chatHeaderPhone').innerText = "+" + phoneNum;
+            document.getElementById('chatHeaderAvatar').innerText = contactName.charAt(0).toUpperCase();
+            
+            const badge = document.getElementById('chatHeaderBadge');
+            badge.className = `badge badge-${relationshipType}`;
+            badge.innerText = relationshipType;
+
+            // Load bubbles
+            loadChatHistory(phoneNum);
+        }
+
+        // Fetch bubbles from server history API
+        async function loadChatHistory(phoneNum, silent = false) {
+            const container = document.getElementById('chatMessagesContainer');
+            try {
+                const res = await fetch(`/api/messages/${phoneNum}`);
+                const messages = await res.json();
+                
+                let lastScrollHeight = container.scrollHeight;
+                let wasScrolledToBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+
+                if (messages.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color: var(--text-secondary); margin: auto; font-size: 14px;">No messages in this pipeline history.</div>`;
+                    return;
+                }
+
+                container.innerHTML = messages.map(m => {
+                    const isInbound = m.sender_type === 'user';
+                    const rowClass = isInbound ? 'msg-inbound' : 'msg-outbound';
+                    
+                    let senderLabel = '';
+                    if (!isInbound) {
+                        senderLabel = m.sender_type === 'clone' ? '<span class="msg-tag" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">AI Reply</span>' : '<span class="msg-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Manual Override</span>';
+                    }
+
+                    const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                    return `
+                        <div class="msg-row ${rowClass}">
+                            <div class="msg-bubble">
+                                <div class="msg-text">${m.message_body}</div>
+                                <div class="msg-meta">
+                                    ${senderLabel}
+                                    <span>${timeStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Scroll to bottom on initial load, or if the user was already scrolled to the bottom
+                if (!silent || wasScrolledToBottom) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch(e) {
+                if (!silent) {
+                    container.innerHTML = `<div style="text-align:center; color: var(--danger-color); margin: auto; font-size: 14px;">Failed loading chat history.</div>`;
+                }
+            }
+        }
+
+        // Send a manual message from footer
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInputField');
+            const message = input.value.trim();
+            if (!message || !activeChatPhone) return;
+
+            // Clear input instantly to feel snappy
+            input.value = "";
 
             try {
                 const res = await fetch('/api/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to: selectedModalNumber, message: body })
+                    body: JSON.stringify({ to: activeChatPhone, message: message })
                 });
                 const data = await res.json();
                 if(data.success) {
-                    closeQuickModal();
-                    loadActivityStreams();
+                    // Force reload history and stats
+                    await loadChatHistory(activeChatPhone);
                     loadSystemDashboardMetrics();
                 } else {
                     alert("Execution rejected: " + data.error);
@@ -819,50 +1105,15 @@
             }
         }
 
-        async function sendManualMessage() {
-            const phone = document.getElementById('termPhoneInput').value;
-            const body = document.getElementById('termMessageInput').value;
-            const status = document.getElementById('terminalStatus');
-
-            if(!phone || !body) {
-                status.style.color = "#ef4444";
-                status.innerText = "⚠️ Fill out target fields.";
-                return;
+        function handleChatInputKey(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
             }
-
-            status.style.color = "#94a3b8";
-            status.innerText = "Pushing outbound frame packet...";
-
-            try {
-                const res = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to: phone, message: body })
-                });
-                const data = await res.json();
-                if(data.success) {
-                    status.style.color = "#10b981";
-                    status.innerText = "🚀 Dispatched cleanly!";
-                    document.getElementById('termMessageInput').value = "";
-                    loadSystemDashboardMetrics();
-                } else { throw new Error(data.error); }
-            } catch(e) {
-                status.style.color = "#ef4444";
-                status.innerText = "❌ Transmit interrupted.";
-            }
-            setTimeout(() => status.innerText = "", 4000);
         }
 
         // Initialize App
         loadSystemDashboardMetrics();
         loadCorePromptString();
-        
-        // Sync logs table dynamically every 5 seconds
-        setInterval(() => {
-            if(document.getElementById('tab-logs').classList.contains('active-section')) {
-                loadActivityStreams();
-            }
-        }, 5000);
     </script>
 </body>
 </html>

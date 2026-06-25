@@ -602,6 +602,34 @@ app.post('/api/send', async (req, res) => {
   }
 });
 
+// Fetch full message history for a specific phone number
+app.get('/api/messages/:phone', async (req, res) => {
+  const { phone } = req.params;
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database uninitialized' });
+  }
+  try {
+    const cleanPhone = phone.replace(/\D/g, '');
+    logEvent('INFO', 'Fetching full conversation history...', { phone_number: cleanPhone });
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('phone_number', cleanPhone)
+      .order('timestamp', { ascending: true }); // chronological order
+
+    if (error) {
+      logEvent('ERROR', 'API fetch history failed:', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+    
+    res.json(data || []);
+  } catch (err) {
+    logEvent('ERROR', 'API fetch history exception:', { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Dynamic Client View Asset Server
 app.use(express.static(__dirname));
 
