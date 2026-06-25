@@ -36,8 +36,6 @@ app.use((req, res, next) => {
   next();
 });
 
-let aiModeActive = true;
-
 // Environment Variable Mapping with Legacy Fallbacks
 const PORT = process.env.PORT || 3000;
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || process.env.VERIFY_TOKEN;
@@ -328,11 +326,6 @@ app.post('/webhook', async (req, res) => {
       logEvent('ERROR', 'Incoming message insertion failed:', { error: msgInsertError.message });
     }
 
-    if (!aiModeActive) {
-      logEvent('INFO', 'AI Engine is inactive. Skipping response generation.');
-      return;
-    }
-
     let currentName = contact?.contact_name;
     let relationshipType = contact?.relationship_type || 'stranger';
 
@@ -363,22 +356,35 @@ app.post('/webhook', async (req, res) => {
 
     const pastHistoryText = await getPastHistoryString(cleanFrom, finalTargetName, msgId);
     
-    // Fetch custom UI system prompt guidelines
+    // Fetch custom UI system prompt guidelines and AI active state in a single query
     let baseDashboardPrompt = "You are Charan. Text back casually in Roman-Telugu.";
+    let dbAiModeActive = true;
     try {
-      const { data: settingsData, error: settingsError } = await supabase
+      const { data: settingsList, error: settingsError } = await supabase
         .from('system_settings')
-        .select('system_prompt')
-        .eq('id', 1)
-        .maybeSingle();
+        .select('id, system_prompt')
+        .in('id', [1, 2]);
       
       if (settingsError) {
         logEvent('ERROR', 'System settings fetch failed:', { error: settingsError.message });
-      } else if (settingsData?.system_prompt) {
-        baseDashboardPrompt = settingsData.system_prompt;
+      } else if (settingsList) {
+        const promptSetting = settingsList.find(s => s.id === 1);
+        const aiModeSetting = settingsList.find(s => s.id === 2);
+        
+        if (promptSetting?.system_prompt) {
+          baseDashboardPrompt = promptSetting.system_prompt;
+        }
+        if (aiModeSetting && aiModeSetting.system_prompt === 'false') {
+          dbAiModeActive = false;
+        }
       }
     } catch (err) {
       logEvent('ERROR', 'System settings acquisition exception:', { error: err.message });
+    }
+
+    if (!dbAiModeActive) {
+      logEvent('INFO', 'AI Engine is inactive in DB settings. Skipping response generation.');
+      return;
     }
 
     // Pass system directives natively to Gemini context settings
@@ -537,15 +543,45 @@ app.get('/api/messages', async (req, res) => {
   }
 });
 
-app.get('/api/settings', (req, res) => res.json({ aiModeActive }));
-
-app.post('/api/settings', (req, res) => {
-  if (typeof req.body.aiModeActive === 'boolean') {
-    aiModeActive = req.body.aiModeActive;
-    logEvent('INFO', 'AI mode active state updated.', { aiModeActive });
-    return res.json({ success: true, aiModeActive });
+app.get('/api/settings', async (req, res) => {
+  if (!supabase) {
+    return res.json({ aiModeActive: true });
   }
-  res.status(400).json({ success: false, error: 'Invalid parameters' });
+  try {
+    const { data, error } = await supabase.from('system_settings').select('system_prompt').eq('id', 2).maybeSingle();
+    if (error) {
+      logEvent('ERROR', 'Failed to fetch AI mode state:', { error: error.message });
+      return res.json({ aiModeActive: true });
+    }
+    const active = data ? data.system_prompt !== 'false' : true;
+    res.json({ aiModeActive: active });
+  } catch (err) {
+    logEvent('ERROR', 'API settings fetch exception:', { error: err.message });
+    res.json({ aiModeActive: true });
+  }
+});
+
+app.post('/api/settings', async (req, res) => {
+  const { aiModeActive } = req.body;
+  if (typeof aiModeActive !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'Invalid parameters' });
+  }
+  if (!supabase) {
+    return res.status(500).json({ success: false, error: 'Database uninitialized' });
+  }
+  try {
+    const activeStr = aiModeActive ? 'true' : 'false';
+    const { error } = await supabase.from('system_settings').upsert({ id: 2, system_prompt: activeStr, updated_at: new Date() });
+    if (error) {
+      logEvent('ERROR', 'Failed to save AI mode state:', { error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    logEvent('INFO', 'AI mode active state updated in DB.', { aiModeActive });
+    res.json({ success: true, aiModeActive });
+  } catch (err) {
+    logEvent('ERROR', 'API settings save exception:', { error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/stats', async (req, res) => {
