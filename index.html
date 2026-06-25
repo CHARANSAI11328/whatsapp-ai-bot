@@ -1063,10 +1063,21 @@
                     
                     let senderLabel = '';
                     if (!isInbound) {
-                        senderLabel = m.sender_type === 'clone' ? '<span class="msg-tag" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">AI Reply</span>' : '<span class="msg-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Manual Override</span>';
+                        senderLabel = m.sender_type.startsWith('clone') ? '<span class="msg-tag" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">AI Reply</span>' : '<span class="msg-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Manual Override</span>';
                     }
 
                     const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    
+                    let ticksHtml = '';
+                    if (!isInbound) {
+                        let ticksIcon = '<i class="fa-solid fa-check" style="font-size: 10px; color: var(--text-secondary); opacity: 0.6;" title="Sent"></i>'; // single grey tick
+                        if (m.sender_type.endsWith('_delivered')) {
+                            ticksIcon = '<i class="fa-solid fa-check-double" style="font-size: 10px; color: var(--text-secondary); opacity: 0.6;" title="Delivered"></i>'; // double grey ticks
+                        } else if (m.sender_type.endsWith('_read')) {
+                            ticksIcon = '<i class="fa-solid fa-check-double" style="font-size: 10px; color: #34b7f1;" title="Read"></i>'; // double blue ticks
+                        }
+                        ticksHtml = `<span style="margin-left: 4px; display: inline-flex; align-items: center;">${ticksIcon}</span>`;
+                    }
 
                     return `
                         <div class="msg-row ${rowClass}">
@@ -1075,6 +1086,7 @@
                                 <div class="msg-meta">
                                     ${senderLabel}
                                     <span>${timeStr}</span>
+                                    ${ticksHtml}
                                 </div>
                             </div>
                         </div>

@@ -211,7 +211,9 @@ async function sendWhatsAppMessage(to, text) {
     }, {
       headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' }
     });
-    logEvent('INFO', 'Meta API Delivery Success.', { messageId: response.data?.messages?.[0]?.id });
+    const messageId = response.data?.messages?.[0]?.id;
+    logEvent('INFO', 'Meta API Delivery Success.', { messageId });
+    return messageId;
   } catch (err) {
     const apiError = err.response?.data?.error?.message || err.message;
     logEvent('ERROR', 'Meta API Delivery Failure:', { error: apiError });
@@ -246,6 +248,44 @@ app.post('/webhook', async (req, res) => {
     const entry   = req.body?.entry?.[0];
     const changes = entry?.changes?.[0];
     const value   = changes?.value;
+    
+    // Handle status update webhooks (sent, delivered, read)
+    const statusObj = value?.statuses?.[0];
+    if (statusObj) {
+      const msgId = statusObj.id;
+      const status = statusObj.status;
+      logEvent('INFO', 'Incoming webhook status update event:', { messageId: msgId, status });
+      
+      if (supabase) {
+        const { data: message, error: msgSelectErr } = await supabase
+          .from('messages')
+          .select('sender_type')
+          .eq('id', msgId)
+          .maybeSingle();
+
+        if (msgSelectErr) {
+          logEvent('ERROR', 'Failed to query message for status update:', { error: msgSelectErr.message });
+        } else if (message) {
+          const currentSenderType = message.sender_type;
+          if (currentSenderType.startsWith('clone') || currentSenderType.startsWith('manual')) {
+            const baseType = currentSenderType.split('_')[0]; // 'clone' or 'manual'
+            const newSenderType = `${baseType}_${status}`;
+            
+            logEvent('INFO', `Updating message ${msgId} status: ${currentSenderType} -> ${newSenderType}`);
+            const { error: updateErr } = await supabase
+              .from('messages')
+              .update({ sender_type: newSenderType })
+              .eq('id', msgId);
+
+            if (updateErr) {
+              logEvent('ERROR', 'Failed to update message status:', { error: updateErr.message });
+            }
+          }
+        }
+      }
+      return;
+    }
+
     const msgObj  = value?.messages?.[0];
     
     // Validate request structure safely
@@ -422,7 +462,15 @@ You:`;
     const cloneReply = response.text?.trim() || '...';
     logEvent('INFO', 'AI reply generated successfully.', { reply: cloneReply });
 
-    const outgoingId = 'clone_' + Date.now();
+    let messageId = null;
+    try {
+      messageId = await sendWhatsAppMessage(cleanFrom, cloneReply);
+      logEvent('INFO', 'Transmission Dispatched successfully.', { to: cleanFrom, reply: cloneReply });
+    } catch (sendErr) {
+      logEvent('ERROR', 'AI message transmission dispatch failed:', { error: sendErr.message });
+    }
+
+    const outgoingId = messageId || ('clone_' + Date.now());
     logEvent('INFO', 'Saving AI reply message to database...', { to: cleanFrom, messageId: outgoingId });
     const { error: replyInsertError } = await supabase.from('messages').insert({
       id: outgoingId,
@@ -434,9 +482,6 @@ You:`;
     if (replyInsertError) {
       logEvent('ERROR', 'AI reply database insertion failed:', { error: replyInsertError.message });
     }
-
-    await sendWhatsAppMessage(cleanFrom, cloneReply);
-    logEvent('INFO', 'Transmission Dispatched successfully.', { to: cleanFrom, reply: cloneReply });
 
   } catch (err) {
     logEvent('ERROR', 'Critical error handling webhook pipeline event:', { error: err.message });
@@ -518,7 +563,7 @@ app.get('/api/messages', async (req, res) => {
       const entry = uniqueMap[m.phone_number];
       if (m.sender_type === 'user' && !entry.incoming) {
         entry.incoming = m.message_body;
-      } else if ((m.sender_type === 'clone' || m.sender_type === 'manual') && !entry.reply) {
+      } else if ((m.sender_type.startsWith('clone') || m.sender_type.startsWith('manual')) && !entry.reply) {
         entry.reply = m.message_body;
       }
     }
@@ -614,11 +659,11 @@ app.post('/api/send', async (req, res) => {
   }
 
   const cleanTarget = to.replace(/\D/g, '');
-  const manualId = 'manual_out_' + Date.now();
+  const fallbackManualId = 'manual_out_' + Date.now();
 
   try {
     logEvent('INFO', 'Initiating manual message dispatch...', { to: cleanTarget });
-    await sendWhatsAppMessage(cleanTarget, message);
+    const messageId = await sendWhatsAppMessage(cleanTarget, message);
     
     // Check if the contact already exists
     const { data: contact, error: contactError } = await supabase
@@ -649,7 +694,7 @@ app.post('/api/send', async (req, res) => {
     }
     
     const { error } = await supabase.from('messages').insert({
-      id: manualId,
+      id: messageId || fallbackManualId,
       phone_number: cleanTarget,
       sender_type: 'manual',
       message_body: message
