@@ -604,7 +604,7 @@ app.get('/api/stats', async (req, res) => {
 });
 
 app.post('/api/send', async (req, res) => {
-  const { to, message } = req.body;
+  const { to, message, name } = req.body;
   if (!to || !message) return res.status(400).json({ success: false, error: 'Missing parameters' });
   if (typeof to !== 'string' || typeof message !== 'string') {
     return res.status(400).json({ success: false, error: 'Invalid parameters: types must be strings' });
@@ -619,6 +619,34 @@ app.post('/api/send', async (req, res) => {
   try {
     logEvent('INFO', 'Initiating manual message dispatch...', { to: cleanTarget });
     await sendWhatsAppMessage(cleanTarget, message);
+    
+    // Check if the contact already exists
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('phone_number')
+      .eq('phone_number', cleanTarget)
+      .maybeSingle();
+
+    if (contactError) {
+      logEvent('ERROR', 'Supabase contact query failed during manual send:', { error: contactError.message });
+    }
+
+    if (!contact) {
+      const contactName = name || ("+" + cleanTarget);
+      logEvent('INFO', 'Registering new contact during manual override send...', { phone_number: cleanTarget, name: contactName });
+      const { error: contactInsertError } = await supabase
+        .from('contacts')
+        .insert({
+          phone_number: cleanTarget,
+          contact_name: contactName,
+          is_stranger: true,
+          relationship_type: 'stranger'
+        });
+      
+      if (contactInsertError) {
+        logEvent('ERROR', 'Failed to register contact during manual send:', { error: contactInsertError.message });
+      }
+    }
     
     const { error } = await supabase.from('messages').insert({
       id: manualId,

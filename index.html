@@ -792,8 +792,23 @@
             <div class="chat-container">
                 <!-- Sidebar Pane: Channels List -->
                 <div class="chat-sidebar">
-                    <div class="chat-search-bar">
-                        <input type="text" id="chatSearchInput" class="form-input" placeholder="Search chats..." style="padding: 10px 14px; font-size: 13.5px;" oninput="filterChats()">
+                    <div class="chat-search-bar" style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="chatSearchInput" class="form-input" placeholder="Search chats..." style="padding: 10px 14px; font-size: 13.5px; flex-grow: 1;" oninput="filterChats()">
+                        <button class="btn-action" style="padding: 10px 12px; margin: 0; white-space: nowrap; border-radius: 8px; font-size: 13.5px; box-shadow: none;" onclick="toggleNewChatForm(document.getElementById('newChatContainer').style.display !== 'flex')" title="Start New Chat">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <!-- Collapsible Start New Chat Form -->
+                    <div id="newChatContainer" style="display: none; padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.01); flex-direction: column; gap: 10px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span>Start New Chat</span>
+                            <i class="fa-solid fa-xmark" style="cursor: pointer; color: var(--text-secondary); font-size: 14px;" onclick="toggleNewChatForm(false)"></i>
+                        </div>
+                        <input type="text" id="newChatPhone" class="form-input" placeholder="Phone (e.g. 919059262808)" style="padding: 10px 12px; font-size: 13px;">
+                        <input type="text" id="newChatName" class="form-input" placeholder="Name (e.g. Rajesh)" style="padding: 10px 12px; font-size: 13px;">
+                        <button class="btn-action" style="padding: 10px 12px; width: 100%; margin: 0; font-size: 13px; justify-content: center; border-radius: 8px;" onclick="initiateNewChat()">
+                            <i class="fa-solid fa-comment-dots"></i> Open Conversation
+                        </button>
                     </div>
                     <div id="chatChannelsList" class="chat-list">
                         <div style="text-align:center; padding: 30px; color: var(--text-secondary); font-size: 14px;">Querying cloud streams...</div>
@@ -1077,6 +1092,76 @@
             }
         }
 
+        function toggleNewChatForm(show) {
+            const container = document.getElementById('newChatContainer');
+            if (show) {
+                container.style.display = 'flex';
+                document.getElementById('newChatPhone').focus();
+            } else {
+                container.style.display = 'none';
+                document.getElementById('newChatPhone').value = '';
+                document.getElementById('newChatName').value = '';
+            }
+        }
+
+        function initiateNewChat() {
+            const phoneInput = document.getElementById('newChatPhone');
+            const nameInput = document.getElementById('newChatName');
+            
+            const rawPhone = phoneInput.value.trim();
+            const rawName = nameInput.value.trim();
+
+            if (!rawPhone) {
+                alert("Please enter a phone number.");
+                return;
+            }
+
+            const cleanPhone = rawPhone.replace(/\D/g, '');
+            if (cleanPhone.length < 10) {
+                alert("Please enter a valid phone number with country code (at least 10 digits).");
+                return;
+            }
+
+            const finalName = rawName || ("+" + cleanPhone);
+            
+            // Check if this contact already exists in chatsDataList
+            const existing = chatsDataList.find(c => c.from === cleanPhone);
+            if (existing) {
+                selectChat(existing.from, existing.contact, existing.type);
+                toggleNewChatForm(false);
+                return;
+            }
+
+            // Otherwise, set active chat state as stranger
+            activeChatPhone = cleanPhone;
+            activeChatName = finalName;
+            activeChatType = 'stranger';
+
+            // Highlight in sidebar list (removing highlights)
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active-chat'));
+
+            // Open chat workspace nodes
+            document.getElementById('chatEmptyState').style.display = 'none';
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('chatMessagesContainer').style.display = 'flex';
+            document.getElementById('chatFooter').style.display = 'flex';
+
+            // Populate header details
+            document.getElementById('chatHeaderName').innerText = finalName;
+            document.getElementById('chatHeaderPhone').innerText = "+" + cleanPhone;
+            document.getElementById('chatHeaderAvatar').innerText = finalName.charAt(0).toUpperCase();
+            
+            const badge = document.getElementById('chatHeaderBadge');
+            badge.className = `badge badge-stranger`;
+            badge.innerText = 'stranger';
+
+            // Clear messages container since there's no history yet
+            const msgContainer = document.getElementById('chatMessagesContainer');
+            msgContainer.innerHTML = `<div style="text-align:center; color: var(--text-secondary); margin: auto; font-size: 14px;">No messages in this pipeline history. Type below to start the conversation.</div>`;
+
+            toggleNewChatForm(false);
+        }
+
         // Send a manual message from footer
         async function sendChatMessage() {
             const input = document.getElementById('chatInputField');
@@ -1090,13 +1175,14 @@
                 const res = await fetch('/api/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to: activeChatPhone, message: message })
+                    body: JSON.stringify({ to: activeChatPhone, message: message, name: activeChatName })
                 });
                 const data = await res.json();
                 if(data.success) {
-                    // Force reload history and stats
+                    // Force reload history, sidebar activity list, and stats
                     await loadChatHistory(activeChatPhone);
                     loadSystemDashboardMetrics();
+                    loadActivityStreams(true);
                 } else {
                     alert("Execution rejected: " + data.error);
                 }
