@@ -241,6 +241,30 @@ async function sendWhatsAppMessage(to, text) {
   }
 }
 
+// Fetch the temporary binary download URL for a Meta Media ID
+async function getWhatsAppMediaUrl(mediaId) {
+  if (!WHATSAPP_TOKEN) {
+    throw new Error('Meta credentials missing.');
+  }
+  const url = `https://graph.facebook.com/v20.0/${mediaId}`;
+  const res = await axios.get(url, {
+    headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` }
+  });
+  return res.data?.url;
+}
+
+// Download raw media file from Meta servers as a Buffer payload
+async function downloadWhatsAppMedia(mediaUrl) {
+  if (!WHATSAPP_TOKEN) {
+    throw new Error('Meta credentials missing.');
+  }
+  const res = await axios.get(mediaUrl, {
+    headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` },
+    responseType: 'arraybuffer'
+  });
+  return Buffer.from(res.data);
+}
+
 // ─── ENDPOINTS AND WEBHOOK SYSTEMS ───
 
 app.get('/webhook', (req, res) => {
@@ -314,16 +338,18 @@ app.post('/webhook', async (req, res) => {
       return;
     }
 
-    if (msgObj.type !== 'text') {
-      logEvent('INFO', 'Incoming webhook event skipped: Message type is not text.', { type: msgObj.type });
+    if (msgObj.type !== 'text' && msgObj.type !== 'image') {
+      logEvent('INFO', 'Incoming webhook event skipped: Message type is not text or image.', { type: msgObj.type });
       return;
     }
 
     const rawFrom = msgObj.from;
-    const msgText = msgObj.text?.body;
     const msgId   = msgObj.id;
+    const msgText = msgObj.type === 'image'
+      ? (msgObj.image?.caption ? `[Photo] ${msgObj.image.caption}` : '[Sent a Photo]')
+      : (msgObj.text?.body || '');
 
-    if (!rawFrom || !msgText || !msgId) {
+    if (!rawFrom || !msgId) {
       logEvent('WARNING', 'Incoming webhook message incomplete.', { msgObj });
       return;
     }
@@ -437,6 +463,27 @@ app.post('/webhook', async (req, res) => {
     if (finalTargetName.toUpperCase() === 'CHARAN') finalTargetName = "Mava";
 
     const pastHistoryText = await getPastHistoryString(cleanFrom, finalTargetName, msgId);
+
+    // Download media attachment if message type is an image
+    let imageBuffer = null;
+    let imageMimeType = null;
+    if (msgObj.type === 'image') {
+      const mediaId = msgObj.image?.id;
+      imageMimeType = msgObj.image?.mime_type;
+      if (mediaId) {
+        try {
+          logEvent('INFO', 'Attempting to retrieve WhatsApp media URL...', { mediaId });
+          const mediaUrl = await getWhatsAppMediaUrl(mediaId);
+          if (mediaUrl) {
+            logEvent('INFO', 'Downloading WhatsApp media file...', { mediaUrl });
+            imageBuffer = await downloadWhatsAppMedia(mediaUrl);
+            logEvent('INFO', 'Media downloaded successfully.', { size: imageBuffer.length });
+          }
+        } catch (err) {
+          logEvent('ERROR', 'Failed to download WhatsApp media:', { error: err.message });
+        }
+      }
+    }
     
     // Fetch custom UI system prompt guidelines and AI active state in a single query
     let baseDashboardPrompt = "You are Charan. Text back casually in Roman-Telugu.";
@@ -503,12 +550,23 @@ ${pastHistoryText || "No context history logged."}
 ${finalTargetName}: ${msgText}
 You:`;
 
-    logEvent('INFO', 'Generating response via Gemini AI engine...', { contact: finalTargetName });
+    logEvent('INFO', 'Generating response via Gemini AI engine...', { contact: finalTargetName, hasImage: !!imageBuffer });
     
     if (!ai) {
       logEvent('ERROR', 'Gemini AI client is uninitialized. Cannot reply.');
       return;
     }
+
+    const contentsPayload = [];
+    if (imageBuffer && imageMimeType) {
+      contentsPayload.push({
+        inlineData: {
+          mimeType: imageMimeType,
+          data: imageBuffer.toString('base64')
+        }
+      });
+    }
+    contentsPayload.push(userPromptPayload);
 
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
@@ -516,7 +574,7 @@ You:`;
         systemInstruction: systemInstruction,
         temperature: 0.75,
       },
-      contents: userPromptPayload,
+      contents: contentsPayload,
     });
 
     const cloneReply = response.text?.trim() || '...';
