@@ -199,7 +199,10 @@ function detectRelationshipType(name, text) {
     return "bhavani";
   }
   if (cleanName.includes("BHAGYA") || cleanName.includes("LAKSHMI") || cleanText.includes("AMMA") || cleanText.includes("MOTHER")) {
-    return "family";
+    return "mother";
+  }
+  if (cleanText.includes("NANNA") || cleanText.includes("FATHER") || cleanText.includes("DADDY")) {
+    return "father";
   }
   if (cleanText.includes("FRIEND") || cleanText.includes("MAVA") || cleanText.includes("BAVA") || cleanText.includes("RA")) {
     return "friend";
@@ -469,6 +472,18 @@ app.post('/webhook', async (req, res) => {
     // Determine if the contact is recognized or new
     const isNewPerson = (!currentName || relationshipType === 'stranger') ? 'YES' : 'NO';
 
+    // Build specific relationship reinforcement instructions
+    let relationshipReinforcement = "";
+    if (relationshipType === 'father') {
+      relationshipReinforcement = `- Relationship Context: You are talking to your FATHER. Always address him respectfully as "Nanna" or "Nanna garu" in Telugu. Show warmth, respect, and obey his guidance.`;
+    } else if (relationshipType === 'mother') {
+      relationshipReinforcement = `- Relationship Context: You are talking to your MOTHER. Always address her respectfully as "Amma" in Telugu. Show deep love, care, and polite warmth.`;
+    } else if (relationshipType === 'bhavani') {
+      relationshipReinforcement = `- Relationship Context: You are talking to BHAVANI (your girlfriend). Address her using nicknames like "Pandhi", "Sweety", or "Konda" naturally in the conversation. Be loving, playful, slightly protective, and emotionally open.`;
+    } else if (relationshipType === 'friend') {
+      relationshipReinforcement = `- Relationship Context: You are talking to your friend "${finalTargetName}". You MUST address them by their name "${finalTargetName}" naturally in the conversation (e.g. "enti ${finalTargetName}", "em chestunnav ${finalTargetName}", etc.) to make it feel personal and friendly. Keep it casual and playful.`;
+    }
+
     // Pass system directives natively to Gemini context settings
     const systemInstruction = `
 ${baseDashboardPrompt}
@@ -477,7 +492,8 @@ ${baseDashboardPrompt}
 - Current Interlocutor Name: "${finalTargetName}"
 - Configured Relationship Category: "${relationshipType.toUpperCase()}"
 - Is New Person/Conversation: "${isNewPerson}"
-${isNewPerson === 'NO' ? `- Attention: You already know this person. Their name is "${finalTargetName}" and they are your "${relationshipType.toUpperCase()}". Do NOT ask them who they are, how they know you, or for their name. Keep the conversation flowing naturally using your existing relationship context.` : '- Attention: This is a new conversation with a stranger. You must follow the Conversation Start Rules to ask their name and how they know Charan.'}
+${isNewPerson === 'NO' ? `- Attention: You already know this person. Their name is "${finalTargetName}" and they are your "${relationshipType.toUpperCase()}". Do NOT ask them who they are, how they know you, or for their name. Keep the conversation flowing naturally using your existing relationship context.
+${relationshipReinforcement}` : '- Attention: This is a new conversation with a stranger. You must follow the Conversation Start Rules to ask their name and how they know Charan.'}
 - Rules: Never use markdown symbols, bold text asterisks (**), lists, or formatting brackets. Provide EXACTLY ONE brief, human-sounding messaging chat line.
 `;
 
@@ -681,6 +697,30 @@ app.post('/api/contacts/update', async (req, res) => {
   try {
     const cleanPhone = phone.replace(/\D/g, '');
     logEvent('INFO', 'Manually updating contact details from dashboard:', { phone: cleanPhone, name, relationship });
+    
+    // Enforce mutual exclusivity for close relationships
+    const uniqueRelationships = ['father', 'mother', 'bhavani'];
+    if (uniqueRelationships.includes(relationship)) {
+      const { data: existing, error: checkErr } = await supabase
+        .from('contacts')
+        .select('phone_number, contact_name')
+        .eq('relationship_type', relationship)
+        .neq('phone_number', cleanPhone)
+        .maybeSingle();
+
+      if (checkErr) {
+        logEvent('ERROR', 'Unique relationship validation check failed:', { error: checkErr.message });
+      }
+
+      if (existing) {
+        const existingName = existing.contact_name || existing.phone_number;
+        return res.status(400).json({
+          success: false,
+          error: `Relationship type '${relationship}' is already assigned to '${existingName}' (${existing.phone_number}). Only one contact can hold this relationship.`
+        });
+      }
+    }
+
     const { error } = await supabase
       .from('contacts')
       .update({

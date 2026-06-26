@@ -715,10 +715,12 @@
             letter-spacing: 0.5px;
         }
         .badge-friend { background: rgba(6, 182, 212, 0.1); color: var(--cyan-accent); border: 1px solid rgba(6, 182, 212, 0.25); }
+        .badge-father { background: rgba(16, 185, 129, 0.1); color: var(--green-accent); border: 1px solid rgba(16, 185, 129, 0.25); }
+        .badge-mother { background: rgba(236, 72, 153, 0.1); color: var(--pink-accent); border: 1px solid rgba(236, 72, 153, 0.25); }
         .badge-family { background: rgba(16, 185, 129, 0.1); color: var(--green-accent); border: 1px solid rgba(16, 185, 129, 0.25); }
         .badge-client { background: rgba(245, 158, 11, 0.1); color: var(--yellow-accent); border: 1px solid rgba(245, 158, 11, 0.25); }
         .badge-stranger { background: rgba(148, 163, 184, 0.08); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.15); }
-        .badge-bhavani { background: rgba(236, 72, 153, 0.1); color: var(--pink-accent); border: 1px solid rgba(236, 72, 153, 0.25); }
+        .badge-bhavani { background: rgba(99, 102, 241, 0.1); color: var(--indigo-accent); border: 1px solid rgba(99, 102, 241, 0.25); }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
@@ -854,7 +856,8 @@
                             <select id="chatHeaderRelationshipSelect" class="form-input" style="padding: 6px 10px; font-size: 12px; width: auto; height: 32px; font-weight: 600; cursor: pointer; border-radius: 6px; margin: 0; background-color: var(--bg-card); color: var(--text-primary);" onchange="updateContactRelationship()">
                                 <option value="stranger">Stranger</option>
                                 <option value="friend">Friend</option>
-                                <option value="family">Family</option>
+                                <option value="father">Father</option>
+                                <option value="mother">Mother</option>
                                 <option value="bhavani">Bhavani</option>
                                 <option value="client">Client</option>
                             </select>
@@ -1062,8 +1065,23 @@
             badge.className = `badge badge-${relationshipType}`;
             badge.innerText = relationshipType;
 
+            // Disable unique relationship options if already taken by another contact
+            const isFatherTaken = chatsDataList.some(c => c.from !== phoneNum && c.type === 'father');
+            const isMotherTaken = chatsDataList.some(c => c.from !== phoneNum && c.type === 'mother');
+            const isBhavaniTaken = chatsDataList.some(c => c.from !== phoneNum && c.type === 'bhavani');
+
+            const selectEl = document.getElementById('chatHeaderRelationshipSelect');
+            selectEl.innerHTML = `
+                <option value="stranger">Stranger</option>
+                <option value="friend">Friend</option>
+                <option value="father" ${isFatherTaken ? 'disabled style="color: var(--text-secondary); opacity: 0.5;"' : ''}>Father ${isFatherTaken ? '(Assigned)' : ''}</option>
+                <option value="mother" ${isMotherTaken ? 'disabled style="color: var(--text-secondary); opacity: 0.5;"' : ''}>Mother ${isMotherTaken ? '(Assigned)' : ''}</option>
+                <option value="bhavani" ${isBhavaniTaken ? 'disabled style="color: var(--text-secondary); opacity: 0.5;"' : ''}>Bhavani ${isBhavaniTaken ? '(Assigned)' : ''}</option>
+                <option value="client">Client</option>
+            `;
+
             // Set dropdown value
-            document.getElementById('chatHeaderRelationshipSelect').value = relationshipType;
+            selectEl.value = relationshipType;
 
             // Load bubbles
             loadChatHistory(phoneNum);
@@ -1081,9 +1099,29 @@
         }
 
         function updateContactRelationship() {
-            const name = document.getElementById('chatHeaderName').innerText;
+            let name = document.getElementById('chatHeaderName').innerText;
             const phone = activeChatPhone;
             const relationship = document.getElementById('chatHeaderRelationshipSelect').value;
+            
+            // If relationship changed to 'friend', prompt for their name
+            if (relationship === 'friend') {
+                const isDefaultName = name.startsWith('+') || name.toUpperCase() === 'MAVA' || name.match(/^\d+$/);
+                const promptMsg = isDefaultName 
+                    ? "Please enter your friend's name:" 
+                    : `Confirm or edit your friend's name (currently "${name}"):`;
+                
+                const enteredName = prompt(promptMsg, isDefaultName ? "" : name);
+                if (!enteredName || enteredName.trim() === "") {
+                    if (isDefaultName) {
+                        alert("A name is required for a friend so the AI can address them in conversation!");
+                        // Reset select dropdown
+                        document.getElementById('chatHeaderRelationshipSelect').value = activeChatType;
+                        return;
+                    }
+                } else {
+                    name = enteredName.trim();
+                }
+            }
             
             saveContactUpdates(phone, name, relationship);
         }
@@ -1103,15 +1141,21 @@
                     badge.className = `badge badge-${relationship}`;
                     badge.innerText = relationship;
                     document.getElementById('chatHeaderRelationshipSelect').value = relationship;
+                    activeChatType = relationship;
+                    activeChatName = name;
                     
                     // Reload channel list to reflect the updated name and relationship
                     loadActivityStreams(true);
                 } else {
                     alert("Failed to update contact: " + result.error);
+                    // Reset dropdown
+                    document.getElementById('chatHeaderRelationshipSelect').value = activeChatType;
                 }
             } catch (err) {
                 console.error("Error saving contact updates:", err);
                 alert("Failed to save updates.");
+                // Reset dropdown
+                document.getElementById('chatHeaderRelationshipSelect').value = activeChatType;
             }
         }
 
