@@ -843,11 +843,21 @@
                         <div style="display: flex; align-items: center; gap: 14px;">
                             <div class="chat-window-avatar" id="chatHeaderAvatar">M</div>
                             <div>
-                                <h4 class="chat-header-title" id="chatHeaderName">Contact Name</h4>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <h4 class="chat-header-title" id="chatHeaderName" style="cursor: pointer;" onclick="promptRenameContact()" title="Click to rename contact">Contact Name</h4>
+                                    <i class="fa-solid fa-pen" style="font-size: 11px; color: var(--text-secondary); cursor: pointer;" onclick="promptRenameContact()" title="Rename contact"></i>
+                                </div>
                                 <div class="chat-header-subtitle" id="chatHeaderPhone">+919059262808</div>
                             </div>
                         </div>
-                        <div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <select id="chatHeaderRelationshipSelect" class="form-input" style="padding: 6px 10px; font-size: 12px; width: auto; height: 32px; font-weight: 600; cursor: pointer; border-radius: 6px; margin: 0; background-color: var(--bg-card); color: var(--text-primary);" onchange="updateContactRelationship()">
+                                <option value="stranger">Stranger</option>
+                                <option value="friend">Friend</option>
+                                <option value="family">Family</option>
+                                <option value="bhavani">Bhavani</option>
+                                <option value="client">Client</option>
+                            </select>
                             <span class="badge" id="chatHeaderBadge">stranger</span>
                         </div>
                     </div>
@@ -1052,8 +1062,57 @@
             badge.className = `badge badge-${relationshipType}`;
             badge.innerText = relationshipType;
 
+            // Set dropdown value
+            document.getElementById('chatHeaderRelationshipSelect').value = relationshipType;
+
             // Load bubbles
             loadChatHistory(phoneNum);
+        }
+
+        function promptRenameContact() {
+            const currentName = document.getElementById('chatHeaderName').innerText;
+            const newName = prompt("Enter new name for this contact:", currentName);
+            if (newName === null) return;
+            
+            const phone = activeChatPhone;
+            const relationship = document.getElementById('chatHeaderRelationshipSelect').value;
+            
+            saveContactUpdates(phone, newName.trim(), relationship);
+        }
+
+        function updateContactRelationship() {
+            const name = document.getElementById('chatHeaderName').innerText;
+            const phone = activeChatPhone;
+            const relationship = document.getElementById('chatHeaderRelationshipSelect').value;
+            
+            saveContactUpdates(phone, name, relationship);
+        }
+
+        async function saveContactUpdates(phone, name, relationship) {
+            try {
+                const response = await fetch('/api/contacts/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, name, relationship })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    // Update header UI
+                    document.getElementById('chatHeaderName').innerText = name || "+" + phone;
+                    const badge = document.getElementById('chatHeaderBadge');
+                    badge.className = `badge badge-${relationship}`;
+                    badge.innerText = relationship;
+                    document.getElementById('chatHeaderRelationshipSelect').value = relationship;
+                    
+                    // Reload channel list to reflect the updated name and relationship
+                    loadActivityStreams(true);
+                } else {
+                    alert("Failed to update contact: " + result.error);
+                }
+            } catch (err) {
+                console.error("Error saving contact updates:", err);
+                alert("Failed to save updates.");
+            }
         }
 
         // Fetch bubbles from server history API

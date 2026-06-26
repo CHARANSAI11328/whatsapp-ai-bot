@@ -190,6 +190,23 @@ async function tryExtractName(incomingText) {
   }
 }
 
+// Automatic relationship classifier based on name and message content clues
+function detectRelationshipType(name, text) {
+  const cleanName = (name || "").toUpperCase();
+  const cleanText = (text || "").toUpperCase();
+  
+  if (cleanName.includes("BHAVANI") || cleanText.includes("BHAVANI") || cleanText.includes("SWEETY")) {
+    return "bhavani";
+  }
+  if (cleanName.includes("BHAGYA") || cleanName.includes("LAKSHMI") || cleanText.includes("AMMA") || cleanText.includes("MOTHER")) {
+    return "family";
+  }
+  if (cleanText.includes("FRIEND") || cleanText.includes("MAVA") || cleanText.includes("BAVA") || cleanText.includes("RA")) {
+    return "friend";
+  }
+  return "friend"; // Default to friend once recognized (no longer a stranger)
+}
+
 // Outbound WhatsApp Meta API Pipeline
 async function sendWhatsAppMessage(to, text) {
   if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
@@ -334,14 +351,17 @@ app.post('/webhook', async (req, res) => {
         if (profileName.toUpperCase() === 'CHARAN') profileName = null;
       }
 
-      logEvent('INFO', 'Registering new contact in database...', { phone_number: cleanFrom, name: profileName });
+      const isNewStranger = !profileName;
+      const detectedRel = profileName ? detectRelationshipType(profileName, msgText) : 'stranger';
+
+      logEvent('INFO', 'Registering new contact in database...', { phone_number: cleanFrom, name: profileName, relationship: detectedRel });
       const { data: newC, error: contactInsertError } = await supabase
         .from('contacts')
         .insert({ 
           phone_number: cleanFrom, 
           contact_name: profileName, 
-          is_stranger: true,
-          relationship_type: 'stranger'
+          is_stranger: isNewStranger,
+          relationship_type: detectedRel
         })
         .select()
         .single();
@@ -373,20 +393,39 @@ app.post('/webhook', async (req, res) => {
       currentName = currentName.replace(/[•*_\s]+/g, '').trim();
       if (currentName.toUpperCase() === 'CHARAN') currentName = null;
     }
+
+    // Auto-migrate stranger relationship classifications if contact name is known
+    if (currentName && relationshipType === 'stranger') {
+      relationshipType = detectRelationshipType(currentName, msgText);
+      logEvent('INFO', 'Auto-migrating relationship type for known contact name:', { phone_number: cleanFrom, name: currentName, relationshipType });
+      const { error: relMigrateError } = await supabase
+        .from('contacts')
+        .update({ relationship_type: relationshipType, is_stranger: false })
+        .eq('phone_number', cleanFrom);
+      if (relMigrateError) {
+        logEvent('ERROR', 'Relationship type auto-migration failed:', { error: relMigrateError.message });
+      }
+    }
     
     if (!currentName) {
       let extractedName = await tryExtractName(msgText);
       if (extractedName && extractedName.toUpperCase() !== 'CHARAN') {
-        logEvent('INFO', 'Identity updated for contact:', { phone_number: cleanFrom, name: extractedName });
+        const detectedRel = detectRelationshipType(extractedName, msgText);
+        logEvent('INFO', 'Identity updated for contact:', { phone_number: cleanFrom, name: extractedName, relationshipType: detectedRel });
         const { error: updateError } = await supabase
           .from('contacts')
-          .update({ contact_name: extractedName, is_stranger: false })
+          .update({ 
+            contact_name: extractedName, 
+            is_stranger: false, 
+            relationship_type: detectedRel 
+          })
           .eq('phone_number', cleanFrom);
         
         if (updateError) {
           logEvent('ERROR', 'Contact identity update failed:', { error: updateError.message });
         } else {
           currentName = extractedName;
+          relationshipType = detectedRel;
         }
       }
     }
@@ -427,6 +466,9 @@ app.post('/webhook', async (req, res) => {
       return;
     }
 
+    // Determine if the contact is recognized or new
+    const isNewPerson = (!currentName || relationshipType === 'stranger') ? 'YES' : 'NO';
+
     // Pass system directives natively to Gemini context settings
     const systemInstruction = `
 ${baseDashboardPrompt}
@@ -434,6 +476,8 @@ ${baseDashboardPrompt}
 ⚠️ RUNTIME SYSTEM PARAMETERS (STRICT ENFORCEMENT):
 - Current Interlocutor Name: "${finalTargetName}"
 - Configured Relationship Category: "${relationshipType.toUpperCase()}"
+- Is New Person/Conversation: "${isNewPerson}"
+${isNewPerson === 'NO' ? `- Attention: You already know this person. Their name is "${finalTargetName}" and they are your "${relationshipType.toUpperCase()}". Do NOT ask them who they are, how they know you, or for their name. Keep the conversation flowing naturally using your existing relationship context.` : '- Attention: This is a new conversation with a stranger. You must follow the Conversation Start Rules to ask their name and how they know Charan.'}
 - Rules: Never use markdown symbols, bold text asterisks (**), lists, or formatting brackets. Provide EXACTLY ONE brief, human-sounding messaging chat line.
 `;
 
@@ -625,6 +669,34 @@ app.post('/api/settings', async (req, res) => {
     res.json({ success: true, aiModeActive });
   } catch (err) {
     logEvent('ERROR', 'API settings save exception:', { error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/contacts/update', async (req, res) => {
+  const { phone, name, relationship } = req.body;
+  if (!phone) return res.status(400).json({ success: false, error: 'Missing phone parameter' });
+  if (!supabase) return res.status(500).json({ success: false, error: 'Database uninitialized' });
+  
+  try {
+    const cleanPhone = phone.replace(/\D/g, '');
+    logEvent('INFO', 'Manually updating contact details from dashboard:', { phone: cleanPhone, name, relationship });
+    const { error } = await supabase
+      .from('contacts')
+      .update({
+        contact_name: name || null,
+        relationship_type: relationship || 'stranger',
+        is_stranger: (!name || relationship === 'stranger')
+      })
+      .eq('phone_number', cleanPhone);
+      
+    if (error) {
+      logEvent('ERROR', 'Failed to manually update contact:', { error: error.message });
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    logEvent('ERROR', 'Exception manually updating contact:', { error: err.message });
     res.status(500).json({ success: false, error: err.message });
   }
 });
