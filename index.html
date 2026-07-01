@@ -879,7 +879,185 @@
         .emoji-tab-btn {
             font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
         }
-    </style>
+
+        /* Mobile Responsive Overrides & Components */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            border: 1px solid var(--border-stark);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s;
+            height: 38px;
+            width: 38px;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: rgba(0,0,0,0.03);
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 9;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .chat-mobile-back-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px 12px 6px 0;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-mobile-back-btn:hover {
+            color: var(--text-primary);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 992px) {
+            aside {
+                left: -290px;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            aside.mobile-active {
+                left: 0;
+            }
+
+            main {
+                margin-left: 0;
+                padding: 24px 20px;
+            }
+
+            .mobile-menu-toggle {
+                display: inline-flex;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 22px;
+            }
+            p.subtitle {
+                font-size: 12.5px;
+            }
+            header {
+                margin-bottom: 25px;
+                padding-bottom: 15px;
+            }
+            .metrics-grid {
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            .metric-card {
+                padding: 16px;
+            }
+            .metric-info h2 {
+                font-size: 28px;
+            }
+            .workspace-card {
+                padding: 20px 16px;
+            }
+
+            /* Responsive Chat Split-View Layout */
+            .chat-container {
+                flex-direction: column;
+                height: 580px; /* Restrict height to stay viewport friendly */
+            }
+
+            .chat-sidebar {
+                width: 100% !important;
+                border-right: none !important;
+                display: flex !important;
+                height: 100%;
+            }
+
+            .chat-window {
+                width: 100% !important;
+                display: none !important;
+                height: 100%;
+            }
+
+            /* Toggle view when chat is active */
+            .chat-container.mobile-chat-active .chat-sidebar {
+                display: none !important;
+            }
+
+            .chat-container.mobile-chat-active .chat-window {
+                display: flex !important;
+            }
+
+            .chat-mobile-back-btn {
+                display: inline-flex;
+            }
+
+            /* Bubbles and footer adjustments */
+            .msg-bubble {
+                max-width: 85%;
+            }
+            .chat-footer {
+                padding: 10px 15px;
+                gap: 10px;
+            }
+            .chat-send-btn {
+                padding: 10px 14px;
+                height: 42px;
+            }
+            #emojiToggleBtn {
+                width: 42px !important;
+                height: 42px !important;
+                font-size: 16px !important;
+            }
+
+            /* Emoji picker placement on mobile */
+            .emoji-picker {
+                bottom: 65px;
+                left: 10px;
+                width: calc(100% - 20px);
+                max-width: 320px;
+            }
+
+            .chat-header {
+                padding: 10px 15px;
+            }
+            .chat-header-title {
+                font-size: 13.5px;
+            }
+            .chat-header-subtitle {
+                font-size: 10px;
+            }
+            #chatHeaderRelationshipSelect {
+                padding: 4px 6px !important;
+                font-size: 11px !important;
+                height: 28px !important;
+            }
+            #chatHeaderBadge {
+                padding: 3px 6px !important;
+                font-size: 8px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -903,12 +1081,18 @@
             </div>
         </div>
     </aside>
+    <div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="toggleMobileMenu(event)"></div>
 
     <main>
         <header>
-            <div>
-                <h1 id="workspaceTitle">Persona Core Engine</h1>
-                <p class="subtitle" id="workspaceSubtitle">Map out deep raw background data layers and memory assets</p>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button id="mobileMenuToggle" class="mobile-menu-toggle" onclick="toggleMobileMenu(event)" title="Toggle Sidebar Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <h1 id="workspaceTitle">Persona Core Engine</h1>
+                    <p class="subtitle" id="workspaceSubtitle">Map out deep raw background data layers and memory assets</p>
+                </div>
             </div>
         </header>
 
@@ -986,6 +1170,9 @@
                     <!-- Active Chat Header -->
                     <div id="chatHeader" class="chat-header" style="display: none;">
                         <div style="display: flex; align-items: center; gap: 14px;">
+                            <button id="chatMobileBackBtn" class="chat-mobile-back-btn" onclick="exitChatMobile()" title="Back to chat list">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
                             <div class="chat-window-avatar" id="chatHeaderAvatar">M</div>
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -1058,6 +1245,12 @@
             
             document.getElementById(sectionId).classList.add('active-section');
             element.classList.add('active');
+
+            // Close mobile menu if active
+            const sidebar = document.querySelector('aside');
+            if (sidebar) sidebar.classList.remove('mobile-active');
+            const overlay = document.getElementById('mobileMenuOverlay');
+            if (overlay) overlay.style.display = 'none';
 
             const title = document.getElementById('workspaceTitle');
             const sub = document.getElementById('workspaceSubtitle');
@@ -1209,6 +1402,10 @@
             activeChatPhone = phoneNum;
             activeChatName = contactName;
             activeChatType = relationshipType;
+
+            // Toggle active chat class for mobile layout split view
+            const chatContainer = document.querySelector('.chat-container');
+            if (chatContainer) chatContainer.classList.add('mobile-chat-active');
 
             // Hide emoji picker if open
             const picker = document.getElementById('emojiPickerContainer');
@@ -1456,6 +1653,10 @@
             const msgContainer = document.getElementById('chatMessagesContainer');
             msgContainer.innerHTML = `<div style="text-align:center; color: var(--text-secondary); margin: auto; font-size: 14px;">No messages in this pipeline history. Type below to start the conversation.</div>`;
 
+            // Toggle active chat class for mobile layout split view
+            const chatContainer = document.querySelector('.chat-container');
+            if (chatContainer) chatContainer.classList.add('mobile-chat-active');
+
             toggleNewChatForm(false);
         }
 
@@ -1686,6 +1887,25 @@
             input.focus();
             const newCursorPos = start + emoji.length;
             input.setSelectionRange(newCursorPos, newCursorPos);
+        }
+
+        function toggleMobileMenu(event) {
+            if (event) event.stopPropagation();
+            const sidebar = document.querySelector('aside');
+            const overlay = document.getElementById('mobileMenuOverlay');
+            if (!sidebar || !overlay) return;
+            if (sidebar.classList.contains('mobile-active')) {
+                sidebar.classList.remove('mobile-active');
+                overlay.style.display = 'none';
+            } else {
+                sidebar.classList.add('mobile-active');
+                overlay.style.display = 'block';
+            }
+        }
+
+        function exitChatMobile() {
+            const chatContainer = document.querySelector('.chat-container');
+            if (chatContainer) chatContainer.classList.remove('mobile-chat-active');
         }
 
         // Initialize App
