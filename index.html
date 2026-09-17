@@ -1287,6 +1287,28 @@
             } catch(e) { console.error("Metrics collection failed", e); }
         }
 
+        async function toggleAiEngine() {
+            const checkbox = document.getElementById('aiStatusCheckbox');
+            const newState = checkbox.checked;
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aiModeActive: newState })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    globalAiModeState = data.aiModeActive;
+                } else {
+                    checkbox.checked = !newState;
+                    alert("Failed to update AI mode setting: " + (data.error || 'Unknown error'));
+                }
+            } catch(e) {
+                checkbox.checked = !newState;
+                alert("Network error updating AI mode setting.");
+            }
+        }
+
         async function loadCorePromptString() {
             try {
                 const res = await fetch('/api/system-prompt');

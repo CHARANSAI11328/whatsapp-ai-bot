@@ -38,13 +38,13 @@ app.use((req, res, next) => {
 
 // Environment Variable Mapping with Legacy Fallbacks
 const PORT = process.env.PORT || 3000;
-const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || process.env.VERIFY_TOKEN;
-const WHATSAPP_TOKEN = process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+const VERIFY_TOKEN = (process.env.META_VERIFY_TOKEN || process.env.VERIFY_TOKEN || '').trim();
+const WHATSAPP_TOKEN = (process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
+const PHONE_NUMBER_ID = (process.env.PHONE_NUMBER_ID || '').trim();
+const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+const GEMINI_MODEL = (process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite').trim();
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').trim();
+const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '').trim();
 
 // Structured console logging function
 function logEvent(level, message, meta = {}) {
@@ -90,6 +90,46 @@ try {
   }
 } catch (err) {
   logEvent('ERROR', 'Gemini AI Client initialization failure:', { error: err.message });
+}
+
+// Robust fallback AI text generation function that handles deprecated models gracefully
+async function generateAiContentSafe(contentsPayload, systemInstruction) {
+  if (!ai) {
+    throw new Error('Gemini AI client is uninitialized.');
+  }
+
+  const candidateModels = [
+    GEMINI_MODEL,
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash'
+  ];
+  const uniqueModels = [...new Set(candidateModels.filter(Boolean))];
+
+  let lastError = null;
+  for (const modelName of uniqueModels) {
+    try {
+      logEvent('INFO', `Attempting AI content generation with model: ${modelName}`);
+      const response = await ai.models.generateContent({
+        model: modelName,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.75,
+        },
+        contents: contentsPayload,
+      });
+
+      const replyText = response.text?.trim() || response.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (replyText) {
+        logEvent('INFO', `AI content generation successful via model ${modelName}`);
+        return replyText;
+      }
+    } catch (err) {
+      logEvent('WARNING', `Model ${modelName} failed generation. Trying candidate fallback...`, { error: err.message });
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All Gemini candidate models failed to generate content.');
 }
 
 // ─── ABSOLUTE ROUTE ROOT INTERCEPTOR ───
@@ -338,16 +378,33 @@ app.post('/webhook', async (req, res) => {
       return;
     }
 
-    if (msgObj.type !== 'text' && msgObj.type !== 'image') {
-      logEvent('INFO', 'Incoming webhook event skipped: Message type is not text or image.', { type: msgObj.type });
+    const validTypes = ['text', 'image', 'interactive', 'audio', 'voice', 'video', 'document', 'sticker'];
+    if (!validTypes.includes(msgObj.type)) {
+      logEvent('INFO', `Incoming webhook event skipped: Unsupported message type '${msgObj.type}'.`, { type: msgObj.type });
       return;
     }
 
     const rawFrom = msgObj.from;
     const msgId   = msgObj.id;
-    const msgText = msgObj.type === 'image'
-      ? (msgObj.image?.caption ? `[Photo] ${msgObj.image.caption}` : '[Sent a Photo]')
-      : (msgObj.text?.body || '');
+    let msgText   = '';
+
+    if (msgObj.type === 'text') {
+      msgText = msgObj.text?.body || '';
+    } else if (msgObj.type === 'image') {
+      msgText = msgObj.image?.caption ? `[Photo] ${msgObj.image.caption}` : '[Sent a Photo]';
+    } else if (msgObj.type === 'interactive') {
+      msgText = msgObj.interactive?.button_reply?.title || msgObj.interactive?.list_reply?.title || '[Interactive Response]';
+    } else if (msgObj.type === 'audio' || msgObj.type === 'voice') {
+      msgText = '[Voice Note]';
+    } else if (msgObj.type === 'video') {
+      msgText = msgObj.video?.caption ? `[Video] ${msgObj.video.caption}` : '[Sent a Video]';
+    } else if (msgObj.type === 'document') {
+      msgText = msgObj.document?.caption ? `[Document] ${msgObj.document.caption}` : '[Sent a Document]';
+    } else if (msgObj.type === 'sticker') {
+      msgText = '[Sticker]';
+    } else {
+      msgText = '[Media Message]';
+    }
 
     if (!rawFrom || !msgId) {
       logEvent('WARNING', 'Incoming webhook message incomplete.', { msgObj });
@@ -355,7 +412,7 @@ app.post('/webhook', async (req, res) => {
     }
 
     const cleanFrom = rawFrom.replace(/\D/g, '');
-    logEvent('INFO', 'Incoming webhook text event:', { from: `+${cleanFrom}`, message: msgText });
+    logEvent('INFO', 'Incoming webhook message event:', { from: `+${cleanFrom}`, type: msgObj.type, message: msgText });
 
     if (!supabase) {
       logEvent('ERROR', 'Supabase database is not initialized. Cannot store messages.');
@@ -402,7 +459,7 @@ app.post('/webhook', async (req, res) => {
       }
     }
 
-    // Insert incoming message
+    // Insert incoming message safely with deduplication check
     logEvent('INFO', 'Saving incoming message to database...', { from: cleanFrom, messageId: msgId });
     const { error: msgInsertError } = await supabase.from('messages').insert({
       id: msgId,
@@ -412,6 +469,10 @@ app.post('/webhook', async (req, res) => {
     });
 
     if (msgInsertError) {
+      if (msgInsertError.code === '23505') {
+        logEvent('INFO', 'Duplicate webhook message skipped (already processed).', { messageId: msgId });
+        return;
+      }
       logEvent('ERROR', 'Incoming message insertion failed:', { error: msgInsertError.message });
     }
 
@@ -568,17 +629,14 @@ You:`;
     }
     contentsPayload.push(userPromptPayload);
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.75,
-      },
-      contents: contentsPayload,
-    });
-
-    const cloneReply = response.text?.trim() || '...';
-    logEvent('INFO', 'AI reply generated successfully.', { reply: cloneReply });
+    let cloneReply = '...';
+    try {
+      cloneReply = await generateAiContentSafe(contentsPayload, systemInstruction);
+      logEvent('INFO', 'AI reply generated successfully.', { reply: cloneReply });
+    } catch (aiErr) {
+      logEvent('ERROR', 'AI response generation failed across model candidates:', { error: aiErr.message });
+      return;
+    }
 
     let messageId = null;
     try {
