@@ -1,11 +1,14 @@
 {
   "name": "whatsapp-ai-bot",
   "version": "1.0.0",
-  "description": "WhatsApp AI auto-reply bot powered by Claude + Meta Cloud API",
+  "description": "AgriGuard AI — WhatsApp crop risk intelligence bot powered by Gemini + Meta Cloud API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
