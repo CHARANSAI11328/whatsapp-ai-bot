@@ -1,4 +1,4 @@
-# AgriGuard AI 🌾🛡️
+ # AgriGuard AI 🌾🛡️
 ### Proactive Crop Risk Intelligence Agent & Monitoring Dashboard
 
 AgriGuard AI is an AI-assisted agricultural monitoring platform that transforms standard WhatsApp interactions into a structured, proactive crop intelligence workflow. 
